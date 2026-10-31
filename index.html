@@ -107,7 +107,7 @@ function rnd(){seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t
 const P=[];
 for(let t=0;t<2;t++)for(let i=0;i<11;i++)P.push({t,i,x:0,y:0,vx:0,vy:0,hx:(t?1-FORM[i][0]:FORM[i][0])*W,hy:FORM[i][1]*H,cd:0,sv:0,gk:i===0,sp:i===0?6:i>8?8.6:7.8,dtx:0,dty:0});
 const ball={x:W/2,y:H/2,vx:0,vy:0,own:null,lt:0,kk:null,ts:0,shot:false,tgt:null};
-const m={state:'ready',t:0,half:1,halfLen:90,pause:false,speed:1,cel:0,scorer:0,kick:0,ht:0,betMsg:''};
+const m={state:'ready',score:[0,0],t:0,half:1,halfLen:90,pause:false,speed:1,cel:0,scorer:0,kick:0,ht:0,betMsg:''};
 const st={pos:[0,0],shots:[0,0],sot:[0,0],cor:[0,0]};
 let C1=[null,null],C2=[null,null],SM=[1,1],bet=null,sel=-1,odds=[2,3,3],bal=1000;
 try{const v=+localStorage.getItem('vfb_bal');if(Number.isFinite(v)&&v>=0)bal=v}catch(e){}
