@@ -116,7 +116,7 @@ export default {
         const stub = await room(env, id);
         if (action === "live") {
           if (request.headers.get("Upgrade") !== "websocket") return fail("WebSocket upgrade مطلوب", 426);
-          return stub.fetch("https://room/connect", request);
+          return stub.fetch(request);
         }
         if (action === "bets" && request.method === "POST") {
           const userId = await readToken(request, env);
@@ -251,7 +251,7 @@ export class MatchRoom extends DurableObject {
     if (path === "/bet" && request.method === "POST") {
       try { return await this.handleBet(await request.json()); } catch (error) { return fail(error.message || "تعذر تسجيل الرهان", 409); }
     }
-    if (path === "/connect") {
+    if (path === "/connect" || path.endsWith("/live")) {
       if (request.headers.get("Upgrade") !== "websocket") return fail("WebSocket upgrade مطلوب", 426);
       const pair = new WebSocketPair();
       const client = pair[0], server = pair[1];
