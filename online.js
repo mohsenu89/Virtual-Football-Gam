@@ -91,10 +91,11 @@ function drawPitch(){
   for(let i=0;i<12;i++){g.fillStyle=i%2?"#23803a":"#2b9145";g.fillRect(i*w/12,0,w/12+1,h);}
   g.strokeStyle="#ffffffcc";g.lineWidth=3;g.strokeRect(18,18,w-36,h-36);g.beginPath();g.moveTo(w/2,18);g.lineTo(w/2,h-18);g.stroke();g.beginPath();g.arc(w/2,h/2,82,0,Math.PI*2);g.stroke();g.strokeRect(18,h*.25,145,h*.5);g.strokeRect(w-163,h*.25,145,h*.5);
   if(!lastState)return;
-  (lastState.players||[]).forEach(p=>{const x=p.x*w,y=p.y*h,team=p.team===0?lastState.home:lastState.away;g.fillStyle="#0007";g.beginPath();g.arc(x+3,y+5,15,0,Math.PI*2);g.fill();g.save();g.beginPath();g.arc(x,y,14,0,Math.PI*2);g.clip();g.fillStyle=team.color||"#fff";g.fillRect(x-14,y-14,28,28);let img=logoCache[team.logo];if(img&&img.complete)g.drawImage(img,x-13,y-13,26,26);g.restore();g.strokeStyle=p.keeper?"#ffd05b":"#fff";g.lineWidth=p.keeper?4:2;g.beginPath();g.arc(x,y,14,0,Math.PI*2);g.stroke();});
+  (lastState.players||[]).forEach(p=>{const x=p.x*w,y=p.y*h,team=p.team===0?lastState.home:lastState.away;g.fillStyle="#0007";g.beginPath();g.arc(x+3,y+5,15,0,Math.PI*2);g.fill();g.save();g.beginPath();g.arc(x,y,14,0,Math.PI*2);g.clip();g.fillStyle=team.color||"#fff";g.fillRect(x-14,y-14,28,28);let img=getLogo(team.logo);if(img&&img.complete&&img.naturalWidth)g.drawImage(img,x-13,y-13,26,26);g.restore();g.strokeStyle=p.keeper?"#ffd05b":"#fff";g.lineWidth=p.keeper?4:2;g.beginPath();g.arc(x,y,14,0,Math.PI*2);g.stroke();});
   const bx=lastState.ball.x*w,by=lastState.ball.y*h;g.fillStyle="#fff";g.strokeStyle="#111";g.lineWidth=2;g.beginPath();g.arc(bx,by,8,0,Math.PI*2);g.fill();g.stroke();
 }
 const logoCache={};
+function getLogo(src){if(!logoCache[src]){const img=new Image();img.src=src;logoCache[src]=img;}return logoCache[src];}
 function drawLoop(){animation=requestAnimationFrame(drawLoop);drawPitch();}
 if(apiReady&&token){refreshMe().catch(error=>{showLogin(error.message);});}else showLogin(apiReady?"سجّل باسم مستعار للبدء.":"اضبط عنوان السيرفر في online-config.js بعد نشر backend على Cloudflare.");
 setInterval(()=>{if(!$("lobby").classList.contains("hidden"))loadMatches();},15000);
