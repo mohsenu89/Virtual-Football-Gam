@@ -52,6 +52,9 @@ async function ensureSchedule(env) {
     const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset));
     const key = day.toISOString().slice(0,10).replace(/-/g, "");
     const dayNumber = Math.floor(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()) / 86400000);
+    const dayStart = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
+    const existing = await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE starts_at>=? AND starts_at<?").bind(dayStart, dayStart + 86400000).first();
+    if (existing && Number(existing.n) >= 5) continue;
     const round = rounds[dayNumber % 9];
     for (let i = 0; i < round.length; i++) {
       const starts = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 8 + i * 3, 0, 0);
@@ -65,7 +68,7 @@ async function ensureSchedule(env) {
   }
   await env.DB.prepare("UPDATE matches SET status='finished' WHERE status='scheduled' AND starts_at < ?").bind(Date.now() - 180000).run();
   const upcoming = await env.DB.prepare("SELECT id FROM matches WHERE status='scheduled' AND starts_at BETWEEN ? AND ? ORDER BY starts_at LIMIT 20")
-    .bind(Date.now() - 180000, Date.now() + 3 * 86400000).all();
+    .bind(Date.now() - 180000, Date.now() + 600000).all();
   for (const item of upcoming.results || []) {
     const stub = await room(env, item.id);
     await stub.fetch("https://room/arm", { method: "POST" });
