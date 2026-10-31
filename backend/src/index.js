@@ -63,8 +63,9 @@ async function ensureSchedule(env) {
         .bind(id, dayNumber % 9 + 1, round[i][0], round[i][1], starts, seed, homeOdds, 3.0 + ((seed >>> 13) % 80) / 100, awayOdds, Date.now()).run();
     }
   }
+  await env.DB.prepare("UPDATE matches SET status='finished' WHERE status='scheduled' AND starts_at < ?").bind(Date.now() - 180000).run();
   const upcoming = await env.DB.prepare("SELECT id FROM matches WHERE status='scheduled' AND starts_at BETWEEN ? AND ? ORDER BY starts_at LIMIT 20")
-    .bind(Date.now(), Date.now() + 3 * 86400000).all();
+    .bind(Date.now() - 180000, Date.now() + 3 * 86400000).all();
   for (const item of upcoming.results || []) {
     const stub = await room(env, item.id);
     await stub.fetch("https://room/arm", { method: "POST" });
@@ -149,7 +150,7 @@ export class MatchRoom extends DurableObject {
     const goals = [];
     for (let i = 0; i < count; i++) goals.push({ minute: 5 + Math.floor(rand() * 81), team: rand() < 0.5 ? 0 : 1 });
     goals.sort((a,b) => a.minute - b.minute);
-    state = { id: match.id, status: match.status, startsAt: match.starts_at, seed: match.seed, home: { id: match.home_team_id, name: match.home_name, logo: match.home_logo, color: match.home_color }, away: { id: match.away_team_id, name: match.away_name, logo: match.away_logo, color: match.away_color }, score: [match.home_score, match.away_score], goals, goalIndex: 0, events: [], minute: 0, updatedAt: Date.now() };
+    state = { id: match.id, status: match.status, startsAt: match.starts_at, seed: match.seed, home: { id: match.home_team_id, name: match.home_name, logo: match.home_logo, color: match.home_color }, away: { id: match.away_team_id, name: match.away_name, logo: match.away_logo, color: match.away_color }, score: [match.home_score, match.away_score], odds: { home: match.odds_home, draw: match.odds_draw, away: match.odds_away }, goals, goalIndex: 0, events: [], minute: 0, updatedAt: Date.now() };
     await this.ctx.storage.put("state", state);
     return state;
   }
@@ -168,7 +169,7 @@ export class MatchRoom extends DurableObject {
   snapshot(state) {
     const phase = state.status === "scheduled" ? "قبل المباراة" : state.status === "live" ? (state.minute >= 45 ? "الشوط الثاني" : "الشوط الأول") : "انتهت المباراة";
     const t = state.minute;
-    return { matchId: state.id, status: state.status, startsAt: state.startsAt, minute: state.minute, phase, score: state.score, home: state.home, away: state.away, players: this.playersFor(state, t), ball: { x: .5 + Math.sin(t * .09 + state.seed % 9) * .24, y: .5 + Math.cos(t * .12 + state.seed % 7) * .22 }, events: state.events, updatedAt: state.updatedAt };
+    return { matchId: state.id, status: state.status, startsAt: state.startsAt, minute: state.minute, phase, score: state.score, odds: state.odds, home: state.home, away: state.away, players: this.playersFor(state, t), ball: { x: .5 + Math.sin(t * .09 + state.seed % 9) * .24, y: .5 + Math.cos(t * .12 + state.seed % 7) * .22 }, events: state.events, updatedAt: state.updatedAt };
   }
   async arm() {
     const state = await this.loadState();
@@ -181,7 +182,7 @@ export class MatchRoom extends DurableObject {
     if (state.status !== "scheduled" || Date.now() >= state.startsAt) throw new Error("انتهى وقت الرهان؛ المباراة بدأت أو اقترب موعدها");
     if (!["home","draw","away"].includes(pick)) throw new Error("اختيار الرهان غير صحيح");
     if (!Number.isInteger(stake) || stake < 1 || stake > 500) throw new Error("قيمة الرهان من 1 إلى 500 نقطة");
-    const odds = pick === "home" ? 2.1 : pick === "draw" ? 3.2 : 2.8;
+    const odds = Number(state.odds[pick]);
     const debit = await this.env.DB.prepare("UPDATE wallets SET balance=balance-?,updated_at=? WHERE user_id=? AND balance>=? RETURNING balance")
       .bind(stake, Date.now(), body.userId, stake).first();
     if (!debit) throw new Error("رصيدك التجريبي غير كافٍ");
